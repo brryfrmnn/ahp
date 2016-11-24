@@ -7,6 +7,10 @@ use App\Criteria;
 use App\Alternative;
 use App\RatioIndex;
 use App\CriteriaWeighting;
+use App\EigenCriteria;
+use App\EigenAlternative;
+use App\AlternativeCriteria;
+use App\Result;
 
 class WeightingController extends Controller
 {
@@ -137,13 +141,66 @@ class WeightingController extends Controller
         //hitung CR
         $cr = $ci/$ri;
         if ($cr <= 0.1) {
-            
+            // dd($for_db_eigens);
+            $for_db_eigens = collect($for_db_eigens);
+            $max = $for_db_eigens->max();
+            foreach ($for_db_eigens as $key => $db_eigen) {
+                // dd($db_eigen);
+                $eigen_vector = EigenVector::firstOrNew(['criteria_id' => $key]);
+                $eigen_vector->criteria_id = $key;
+                $eigen_vector->value = $db_eigen;
+                $eigen_vector->save();
+            }
+
             echo "Kriteria Memenuhi syarat karena nilai CR=".$cr;
+
 
 
         } else {
             echo "Kriteria tidak memenuhi syarat karena nilai CR=".$cr;
         }
+    }
+
+    public function alternative($id)
+    {
+        $alternatives = AlternativeCriteria::with('criteria','alternative')->where('criteria_id',$id)->orderBy('alternative_id')->get();
+        //membandingkan bobo alternatif
+        foreach ($alternatives as $key => $alternative1) {
+            foreach ($alternatives as $key => $alternative2) {
+                if ($alternative1->desc == 'more') {
+                    $alternative[$alternative1->id][$alternative2->id] = $alternative1->value/$alternative2->value;
+                } elseif ($alternative1->desc=='less') {
+                    $alternative[$alternative1->id][$alternative2->id] = $alternative2->value/$alternative1->value;
+                }
+            }   
+        }
+        //menghitung total nilai baris
+        foreach ($alternative as $key => $al) {
+            $data_alternative[$key]=0;
+            foreach ($al as $k => $data) {
+                $data_alternative[$key] += $data;
+            }
+        }
+        //menghitung total data dari baris
+        $data_alternative = collect($data_alternative);
+        $total_baris = $data_alternative->sum();
+        //menghitung bobot/ eigen vector
+        foreach ($alternative as $key => $al) {
+            foreach ($data_alternative as $dak => $data) {
+                $eigen_alternative[$dak] = $data/$total_baris;
+                $alternative_criteria = AlternativeCriteria::find($dak);
+                $alternative_criteria->eigen_alternative = $eigen_alternative[$dak];
+                $alternative_criteria->save();
+            }
+        }
+
+        // $data_alternative
+
+            dd($alternative,$data_alternative,$total_baris,$eigen_alternative);    
+        return $alternative;
+        
+
+        return $alternative;
     }
 
     /**
@@ -152,6 +209,37 @@ class WeightingController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    public function process()
+    {
+        
+        $alternatives = Alternative::orderBy('id')->get();        
+
+        foreach ($alternatives as $key => $alternative) {
+            $alternative_criterias = AlternativeCriteria::where('alternative_id',$alternative->id)->orderBy('criteria_id')->get();
+            $nilai_keputusan[$alternative->id] = 0;
+            foreach ($alternative_criterias as $ackey => $alternative_criteria) {
+               $criteria_id = $alternative_criteria->criteria_id;
+               $eigen_criteria = EigenCriteria::where('criteria_id',$criteria_id)->orderBy('criteria_id')->first();
+               // dd($alternative_criteria->eigen_alternative,$eigen_criteria->value);
+               $nilai_keputusan[$alternative->id] += ($alternative_criteria->eigen_alternative*$eigen_criteria->value);
+            }
+        }
+        
+        foreach ($nilai_keputusan as $key => $nilai) {
+            $result = Result::firstOrNew(['alternative_id'=>$key]);
+            $result->alternative_id = $key;
+            $result->value = $nilai;
+            $result->save();
+        }
+
+        $nilai_criteria_id = array_keys($nilai_keputusan);
+ 
+        $nilai_keputusan = collect($nilai_keputusan);
+        dd($nilai_keputusan);
+        $nilai_max = $nilai_keputusan->max();
+        return $nilai_max;    
+    }
+
     public function show($id)
     {
         //
