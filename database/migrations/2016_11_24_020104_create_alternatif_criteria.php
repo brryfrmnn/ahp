@@ -29,12 +29,13 @@ class CreateAlternatifCriteria extends Migration
             $table->increments('id');
             $table->unsignedInteger('criteria_id');
             $table->unsignedInteger('alternative_id');
+            $table->double('value');
             $table->timestamps();
         });
         Schema::create('ratio_indices', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('n');
-            $table->unsignedInteger('value');
+            $table->double('value');
             $table->unsignedInteger('user_id');
             $table->timestamps();
         });

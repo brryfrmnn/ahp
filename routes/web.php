@@ -13,5 +13,10 @@
 
 Route::get('/', function () {
     // return view('welcome');
-    return str_plural('alternatif');
+    return str_plural('criteria_weight');
 });
+
+Auth::routes();
+
+Route::get('/home', 'HomeController@index');
+Route::resource('weighting','WeightingController');
