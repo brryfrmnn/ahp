@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Criteria;
 use App\Alternative;
 use App\RatioIndex;
-use App\CriteriaWeight;
+use App\CriteriaWeighting;
 class AnalyticController extends Controller
 {
     /**

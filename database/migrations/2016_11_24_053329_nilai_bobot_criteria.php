@@ -13,7 +13,7 @@ class NilaiBobotCriteria extends Migration
      */
     public function up()
     {
-        Schema::create('criteria_weights', function (Blueprint $table) {
+        Schema::create('criteria_weightings', function (Blueprint $table) {
             $table->increments('id');
             $table->unsignedInteger('first_criteria_id');
             $table->unsignedInteger('second_criteria_id');
@@ -29,6 +29,6 @@ class NilaiBobotCriteria extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('criteria_weights');
+        Schema::dropIfExists('criteria_weightings');
     }
 }

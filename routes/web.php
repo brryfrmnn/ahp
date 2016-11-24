@@ -19,4 +19,5 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', 'HomeController@index');
+Route::get('weighting/eigen','WeightingController@eigen')->name('weighting.eigen');
 Route::resource('weighting','WeightingController');

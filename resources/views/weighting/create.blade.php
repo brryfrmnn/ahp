@@ -5,11 +5,11 @@
 			<div class="col-md-8 col-md-offset-2">
 				<form  class="form-inline" action="{{route('weighting.store')}}" method="POST" role="form">
 					<legend>Form title</legend>
-								
+								{{csrf_field()}}
 						
 							<div class="form-group">
 							    <div class="col-weighting-10">
-							      <select name="value" id="input" class="form-control" required="required">
+							      <select name="first_criteria_id" id="input" class="form-control" required="required">
 							      	@foreach ($criterias as $criteria)
 								    	<option value="{{$criteria->id}}">{{$criteria->name}}</option>
 								   	@endforeach
@@ -33,7 +33,7 @@
 							</div>
 							<div class="form-group">
 							    <div class="col-sm-10">
-							      <select name="value" id="input" class="form-control" required="required">
+							      <select name="second_criteria_id" id="input" class="form-control" required="required">
 							      	@foreach ($criterias as $criteria)
 								    	<option value="{{$criteria->id}}">{{$criteria->name}}</option>
 								   	@endforeach
