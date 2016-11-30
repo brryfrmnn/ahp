@@ -11,6 +11,7 @@ use App\EigenCriteria;
 use App\EigenAlternative;
 use App\AlternativeCriteria;
 use App\Result;
+use Session;
 
 class WeightingController extends Controller
 {
@@ -69,7 +70,12 @@ class WeightingController extends Controller
                     $reverse_criteria_weighting->update([
                         'value' => $reverse_value
                     ]);  
-                    echo "berhasil";
+                    Session::flash("flash_notification", [
+                                "level"=>"success",
+                                "message"=>"Berhasil"
+                    ]);
+
+                    return redirect()->route('weighting.create');
                 }
             } else {
 
@@ -84,10 +90,20 @@ class WeightingController extends Controller
                         $reverse_criteria_weighting->second_criteria_id = $first_criteria_id;
                         $reverse_criteria_weighting->value = $reverse_value;
                         if ($reverse_criteria_weighting->save()) {
-                            echo "berhasil";
+                            Session::flash("flash_notification", [
+                                "level"=>"success",
+                                "message"=>"Berhasil"
+                            ]);
+
+                            return redirect()->route('weighting.create');
                         }
                     } else {
-                        echo "berhasil";
+                        Session::flash("flash_notification", [
+                                "level"=>"danger",
+                                "message"=>"Berhasil"
+                        ]);
+
+                            return redirect()->route('weighting.create');
                     }
                 }
             }
@@ -146,61 +162,101 @@ class WeightingController extends Controller
             $max = $for_db_eigens->max();
             foreach ($for_db_eigens as $key => $db_eigen) {
                 // dd($db_eigen);
-                $eigen_vector = EigenVector::firstOrNew(['criteria_id' => $key]);
+                $eigen_vector = EigenCriteria::firstOrNew(['criteria_id' => $key]);
                 $eigen_vector->criteria_id = $key;
                 $eigen_vector->value = $db_eigen;
                 $eigen_vector->save();
             }
 
-            echo "Kriteria Memenuhi syarat karena nilai CR=".$cr;
 
+            Session::flash("flash_notification", [
+                "level"=>"danger",
+                "message"=>"Kriteria Memenuhi syarat karena nilai CR==$cr"
+            ]);
 
-
+            return redirect()->route('weighting.alternative');
         } else {
-            echo "Kriteria tidak memenuhi syarat karena nilai CR=".$cr;
+            Session::flash("flash_notification", [
+                "level"=>"danger",
+                "message"=>"Kriteria tidak memenuhi syarat karena nilai CR=$cr"
+            ]);
+            return redirect()->route('weighting.eigen');
         }
+
     }
 
-    public function alternative($id)
+    public function alternative()
     {
-        $alternatives = AlternativeCriteria::with('criteria','alternative')->where('criteria_id',$id)->orderBy('alternative_id')->get();
-        //membandingkan bobo alternatif
-        foreach ($alternatives as $key => $alternative1) {
-            foreach ($alternatives as $key => $alternative2) {
-                if ($alternative1->desc == 'more') {
-                    $alternative[$alternative1->id][$alternative2->id] = $alternative1->value/$alternative2->value;
-                } elseif ($alternative1->desc=='less') {
-                    $alternative[$alternative1->id][$alternative2->id] = $alternative2->value/$alternative1->value;
+        $criterias = Criteria::all();
+        // dd($criterias);
+        $no=1;
+        $status = false;
+        foreach ($criterias as $criteria) {
+            $alternatives = AlternativeCriteria::with('criteria','alternative')->where('criteria_id',$criteria->id)->orderBy('alternative_id')->get();
+            //membandingkan bobo alternatif
+            foreach ($alternatives as $key => $alternative1) {
+                foreach ($alternatives as $key => $alternative2) {
+                    if ($alternative1->desc == 'more') {
+                        $alternative[$alternative1->id][$alternative2->id] = $alternative1->value/$alternative2->value;
+                    } elseif ($alternative1->desc=='less') {
+                        $alternative[$alternative1->id][$alternative2->id] = $alternative2->value/$alternative1->value;
+                    }
+                }   
+            }
+            // dd($alternative);
+            //menghitung total nilai baris
+            foreach ($alternative as $key => $al) {
+                $data_alternative[$key]=0;
+                foreach ($al as $k => $data) {
+                    $data_alternative[$key] += $data;
                 }
-            }   
-        }
-        //menghitung total nilai baris
-        foreach ($alternative as $key => $al) {
-            $data_alternative[$key]=0;
-            foreach ($al as $k => $data) {
-                $data_alternative[$key] += $data;
             }
-        }
-        //menghitung total data dari baris
-        $data_alternative = collect($data_alternative);
-        $total_baris = $data_alternative->sum();
-        //menghitung bobot/ eigen vector
-        foreach ($alternative as $key => $al) {
-            foreach ($data_alternative as $dak => $data) {
-                $eigen_alternative[$dak] = $data/$total_baris;
-                $alternative_criteria = AlternativeCriteria::find($dak);
-                $alternative_criteria->eigen_alternative = $eigen_alternative[$dak];
-                $alternative_criteria->save();
+
+            /*if ($no==2) {
+                        dd($data_alternative);
+                    }*/
+            // dd($data_alternative);
+            //menghitung total data dari baris
+            $data_alternative = collect($data_alternative);
+            $total_baris = $data_alternative->sum();
+            //menghitung bobot/ eigen vector
+            // dd($total_baris);
+            foreach ($alternative as $key => $al) {
+                foreach ($data_alternative as $dak => $data) {
+                    $eigen_alternative[$dak] = $data/$total_baris;
+                    /*if ($no==2) {
+                        dd($eigen_alternative);
+                    }*/
+                    $alternative_criteria = AlternativeCriteria::find($dak);
+                    $alternative_criteria->eigen_alternative = $eigen_alternative[$dak];
+                    if ($alternative_criteria->save()) {
+                        $status = true;
+                    } else {
+                        $status = false;
+                    }
+                }
             }
+            //hapus array terdahulu
+            unset($alternative);
+            unset($data_alternative);
+            unset($eigen_alternative);
+            $no++;
         }
 
         // $data_alternative
 
-            dd($alternative,$data_alternative,$total_baris,$eigen_alternative);    
-        return $alternative;
-        
-
-        return $alternative;
+        if ($status) {
+            Session::flash("flash_notification", [
+                "level"=>"success",
+                "message"=>"Berhasil"
+            ]);
+        } else {
+            Session::flash("flash_notification", [
+                "level"=>"danger",
+                "message"=>"Gagal "
+            ]);
+        }
+        return redirect()->route('weighting.process');
     }
 
     /**
@@ -235,9 +291,11 @@ class WeightingController extends Controller
         $nilai_criteria_id = array_keys($nilai_keputusan);
  
         $nilai_keputusan = collect($nilai_keputusan);
-        dd($nilai_keputusan);
+        // dd($nilai_keputusan);
         $nilai_max = $nilai_keputusan->max();
-        return $nilai_max;    
+        $results = Result::orderBy('value','desc')->get();
+        // $max = $results->max('value');
+        return view('weighting.result',compact('results')) ;   
     }
 
     public function show($id)
